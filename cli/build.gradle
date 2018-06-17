@@ -1,37 +1,17 @@
-buildscript {
-  repositories {
-    maven {
-      url 'https://plugins.gradle.org/m2/'
-    }
-  }
-  dependencies {
-    classpath 'net.ltgt.gradle:gradle-apt-plugin:0.15'
-  }
-}
-
-apply plugin: 'java-library'
-apply plugin: 'eclipse'
-apply plugin: 'net.ltgt.apt'
-apply plugin: 'net.ltgt.apt-eclipse'
-apply plugin: 'maven'
-
-repositories {
-    jcenter()
-}
+eclipse.project.name = 'joci-tools:cli'
 
 dependencies {
 
-
-    implementation 'org.slf4j:slf4j-api:1.7.25'
-    implementation 'com.google.guava:guava:24.1-jre'
-	implementation 'org.apache.commons:commons-compress:1.16.1'
-	implementation 'commons-io:commons-io:2.6'
-	implementation 'com.fasterxml.jackson.core:jackson-databind:2.9.5'
-    implementation 'ch.qos.logback:logback-classic:1.2.3'
-    implementation 'com.github.rvesse:airline:2.4.0'
-
   implementation project(':core')
   implementation project(':materializer')
+
+  implementation 'org.slf4j:slf4j-api:1.7.25'
+  implementation 'com.google.guava:guava:24.1-jre'
+  implementation 'org.apache.commons:commons-compress:1.16.1'
+  implementation 'commons-io:commons-io:2.6'
+  implementation 'com.fasterxml.jackson.core:jackson-databind:2.9.5'
+  implementation 'ch.qos.logback:logback-classic:1.2.3'
+  implementation 'com.github.rvesse:airline:2.4.0'
 
   compileOnly         'com.google.errorprone:error_prone_annotations:2.3.1'
   compileOnly         'org.eclipse.jdt:org.eclipse.jdt.annotation:2.1.100'
@@ -41,17 +21,7 @@ dependencies {
   annotationProcessor 'org.immutables:builder:2.6.1'
   annotationProcessor 'org.immutables:value:2.6.1'
 
-
-
-    // Use JUnit test framework
-    testImplementation 'junit:junit:4.12'
+  // Use JUnit test framework
+  testImplementation 'junit:junit:4.12'
+  
 }
-
-eclipse {
-  project {
-    name = 'joci-tools:cli'
-  }
-}
-
-sourceCompatibility = 1.8
-targetCompatibility = 1.8

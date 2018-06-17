@@ -1,25 +1,5 @@
-buildscript {
-  repositories {
-    maven {
-      url 'https://plugins.gradle.org/m2/'
-    }
-  }
-  dependencies {
-    classpath 'net.ltgt.gradle:gradle-apt-plugin:0.15'
-  }
-}
-
-apply plugin: 'java-library'
-apply plugin: 'eclipse'
-apply plugin: 'net.ltgt.apt'
-apply plugin: 'net.ltgt.apt-eclipse'
-apply plugin: 'maven'
 
 eclipse.project.name = 'joci-tools:core'
-
-repositories {
-    jcenter()
-}
 
 dependencies {
 
@@ -46,6 +26,3 @@ dependencies {
     
 }
 
-
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
