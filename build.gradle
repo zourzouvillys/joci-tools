@@ -44,7 +44,7 @@ subprojects {
   sourceCompatibility = 1.8
   targetCompatibility = 1.8
 
-  group = 'org.gradle.sample'
+  group = 'io.zrz.jocitools'
   version = '1.0'
   
   task sourcesJar(type: Jar, dependsOn: classes) {
