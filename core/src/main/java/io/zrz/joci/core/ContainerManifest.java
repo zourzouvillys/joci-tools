@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 
+import org.eclipse.jdt.annotation.Nullable;
 import org.immutables.value.Value;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -29,12 +30,15 @@ public abstract class ContainerManifest implements ImageBundle {
 
   }
 
+  @Nullable
   @JsonProperty
-  public abstract int schemaVersion();
+  public abstract Integer schemaVersion();
 
+  @Nullable
   @JsonProperty
   public abstract String mediaType();
 
+  @Nullable
   @JsonProperty
   public abstract Config config();
 

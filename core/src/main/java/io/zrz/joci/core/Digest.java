@@ -2,12 +2,13 @@ package io.zrz.joci.core;
 
 import java.io.IOException;
 
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
 import com.google.common.io.ByteSource;
 
-public class Digest {
+public final class Digest {
 
   public Digest(final ByteSource src) throws IOException {
     this.algorithm = "sha256";
@@ -36,8 +37,9 @@ public class Digest {
   final String algorithm;
   final String hash;
 
+  @JsonValue
   @Override
-  public String toString() {
+  public final String toString() {
     return algorithm + ":" + hash;
   }
 
