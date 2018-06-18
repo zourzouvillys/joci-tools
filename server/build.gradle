@@ -1,5 +1,9 @@
-eclipse.project.name = 'joci-tools:server'
 
+apply plugin: 'application'
+
+mainClassName = 'io.zrz.joci.registry.Main'
+
+eclipse.project.name = 'joci-tools:server'
 
 dependencies {
 
@@ -26,5 +30,12 @@ dependencies {
 
   // Use JUnit test framework
   testImplementation 'junit:junit:4.12'
+  
+  
+  // urgh. fix errors in jersey with java9. can't disable XML?   
+  implementation 'javax.xml.bind:jaxb-api:2.3.0'
+  implementation 'com.sun.xml.bind:jaxb-impl:2.3.0'
+  implementation 'org.glassfish.jaxb:jaxb-runtime:2.3.0'
+  implementation 'javax.activation:activation:1.1.1'
   
 }

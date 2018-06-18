@@ -95,12 +95,24 @@ public class BlobUploadResource {
    */
 
   @PUT
-  public Response put(@QueryParam("digest") final String hash) {
+  public Response put(@QueryParam("digest") final String hash, final InputStream content) {
 
     final Digest digest = new Digest(hash);
 
     log.info("PUT: reg=" + registry + ", id=" + uploadId + ", digest=" + digest);
     try {
+
+      if (content != null) {
+
+        final java.nio.file.Path file = this.registry.resolve(uploadId);
+
+        final ByteSink stream = MoreFiles.asByteSink(file, StandardOpenOption.CREATE);
+
+        final long len = stream.writeFrom(content);
+
+        System.err.println("wrote: " + len + " bytes to " + file);
+
+      }
 
       final BlobInfo info = registry.completeUpload(uploadId, digest);
 

@@ -9,6 +9,7 @@ import java.nio.file.Paths;
 import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
 import org.glassfish.jersey.server.ResourceConfig;
+import org.glassfish.jersey.server.ServerProperties;
 
 import io.zrz.joci.core.FilesystemRegistry;
 
@@ -40,7 +41,10 @@ public class Main {
     try {
 
       ///
-      final HttpServer server = GrizzlyHttpServerFactory.createHttpServer(baseUri, create(registry), false);
+
+      ResourceConfig config = create(registry);
+
+      final HttpServer server = GrizzlyHttpServerFactory.createHttpServer(baseUri, config, false);
 
       server.getListeners().iterator().next().registerAddOn(new FixupBrokenContentTypeHeaderAddOn());
 
@@ -62,8 +66,11 @@ public class Main {
 
   public static ResourceConfig create(FilesystemRegistry registry) {
     final ResourceConfig resourceConfig = new ResourceConfig()
+        .property(ServerProperties.WADL_FEATURE_DISABLE, true)
+        .property(ServerProperties.MOXY_JSON_FEATURE_DISABLE, true)
+        .property(ServerProperties.FEATURE_AUTO_DISCOVERY_DISABLE, true)
         .register(RangeHeaderConverter.class)
-        .registerInstances(new DockerRegistry(registry));
+        .register(new DockerRegistry(registry));
 
     return resourceConfig;
   }
