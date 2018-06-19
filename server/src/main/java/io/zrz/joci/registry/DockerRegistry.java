@@ -375,10 +375,10 @@ public class DockerRegistry {
    */
 
   @GET
-  @Path("/_blobs/{hash:.+:.+}")
+  @Path("/_blobs/sha256:{hash:[a-f0-9]+}")
   public Response getBlob(@PathParam("hash") final String hash) throws IOException {
 
-    final Digest digest = new Digest(hash);
+    final Digest digest = new Digest("sha256", hash);
 
     log.info("GET: digest={}", registry, digest);
 
