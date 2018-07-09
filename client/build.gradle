@@ -5,25 +5,48 @@ eclipse.project.name = 'joci-tools:client'
 
 dependencies {
 
-  implementation 'org.glassfish.jersey.core:jersey-client:2.27'
+  // implementation 'org.glassfish.jersey.ext.rx:jersey-rx-client-rxjava2:2.27'
+  // implementation 'org.glassfish.jersey.core:jersey-client:2.27'
   implementation 'org.slf4j:slf4j-api:1.7.25'
   implementation 'com.google.guava:guava:25.1-jre'
   implementation 'com.fasterxml.jackson.core:jackson-databind:2.9.6'
-  implementation 'org.glassfish.jersey.ext.rx:jersey-rx-client-rxjava2:2.27'
+
   // for uploads
   implementation 'com.squareup.okhttp3:okhttp:3.10.0'
 
   implementation project(':core')
 
-  compileOnly         'com.google.errorprone:error_prone_annotations:2.3.1'
+  //compileOnly         'com.google.errorprone:error_prone_annotations:2.3.1'
   compileOnly         'org.eclipse.jdt:org.eclipse.jdt.annotation:2.1.100'
-  compileOnly         'org.immutables:builder:2.6.1'
-  compileOnly         'org.immutables:value:2.6.1:annotations'
+  //compileOnly         'org.immutables:builder:2.6.1'
+  //compileOnly         'org.immutables:value:2.6.1:annotations'
 
-  annotationProcessor 'org.immutables:builder:2.6.1'
-  annotationProcessor 'org.immutables:value:2.6.1'
+  //annotationProcessor 'org.immutables:builder:2.6.1'
+  //annotationProcessor 'org.immutables:value:2.6.1'
 
   // Use JUnit test framework
   testImplementation 'junit:junit:4.12'
   
+}
+
+
+compileJava {
+    inputs.property("moduleName", "joci.client")
+    doFirst {
+        options.compilerArgs = [
+            '--module-path', classpath.asPath,            
+        ]
+        classpath = files()
+    }
+}
+
+
+eclipse.classpath.file {
+  whenMerged {
+    entries
+      .findAll { it.kind.equals('lib') || it.kind.equals('src') }
+      .each {
+        it.entryAttributes['module'] = 'true' 
+      } 
+  }
 }

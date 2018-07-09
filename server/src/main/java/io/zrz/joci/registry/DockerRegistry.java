@@ -5,7 +5,6 @@ import java.io.InputStream;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 
 import javax.inject.Singleton;
@@ -29,7 +28,6 @@ import javax.ws.rs.core.UriInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.hash.HashCode;
 import com.google.common.hash.Hashing;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.MoreFiles;
@@ -54,12 +52,12 @@ public class DockerRegistry {
 
   static final String API_VERSION = "registry/2.0";
 
-  private RegistryProvider registry;
+  private final RegistryProvider registry;
 
   @Context
   UriInfo uri;
 
-  public DockerRegistry(RegistryProvider registry) {
+  public DockerRegistry(final RegistryProvider registry) {
     this.registry = registry;
   }
 
@@ -74,7 +72,7 @@ public class DockerRegistry {
 
   /**
    * start a new upload.
-   * 
+   *
    * @throws IOException
    */
 
@@ -95,7 +93,7 @@ public class DockerRegistry {
     final RegistryUploadSession upload = this.registry.startUpload();
 
     return Response.accepted()
-        .location(uploadEndpoint(upload.uploadId()))
+        .location(this.uploadEndpoint(upload.uploadId()))
         .header("Docker-Upload-Uuid", upload.uploadId())
         .header("Docker-Distribution-Api-Version", API_VERSION)
         .build();
@@ -143,47 +141,69 @@ public class DockerRegistry {
 
     try {
 
-      final java.nio.file.Path file = this.registry.resolve(registry, version);
+      final java.nio.file.Path tempFile = Files.createTempFile("manifest", ".json");
 
-      Files.createDirectories(file.getParent());
+      try {
 
-      MoreFiles
-          .asByteSink(file, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
-          .writeFrom(manifest);
+        MoreFiles
+            .asByteSink(tempFile, StandardOpenOption.TRUNCATE_EXISTING)
+            .writeFrom(manifest);
 
-      final HashCode hash = MoreFiles.asByteSource(file)
-          .hash(Hashing.sha256());
+        final Digest hash = new Digest(MoreFiles.asByteSource(tempFile).hash(Hashing.sha256()));
 
-      log.debug("hash is {}", hash.toString());
+        log.debug("hash is {}", hash.toString());
 
-      final java.nio.file.Path real = file.getParent().resolve("sha256:" + hash.toString());
+        final java.nio.file.Path file = this.registry.resolve(registry, version);
 
-      if (Files.exists(real)) {
+        Files.createDirectories(file.getParent());
 
+        // the target file based on the hash.
+        final java.nio.file.Path real = file.getParent().resolve(hash.getHash());
+
+        // the real target already exists, so nothing to do.
+        if (Files.exists(real)) {
+
+          return Response
+              .notModified()
+              .header("Docker-Distribution-Api-Version", API_VERSION)
+              .header("Docker-Content-Digest", hash.toString())
+              .build();
+
+        }
+
+        // real is repo/manifests/{hash}
+        // tempFile is uploaded content
+        // file is the repo/manifests/{tag}
+
+        // move from tempfile to the hash
+        Files.move(tempFile, real);
+
+        // create link from the tagged path to the actual file.
+
+        Files.deleteIfExists(file);
+
+        Files.createSymbolicLink(file, real);
+
+        log.debug(MoreFiles.asCharSource(real, StandardCharsets.UTF_8).read());
+
+        //
         return Response
-            .notModified()
+            .created(UriBuilder
+                .fromResource(DockerRegistry.class)
+                .path(registry)
+                .path("manifests")
+                .path(version)
+                .build())
             .header("Docker-Distribution-Api-Version", API_VERSION)
-            .header("Docker-Content-Digest", "sha256:" + hash.toString())
+            .header("Docker-Content-Digest", hash.toString())
             .build();
 
       }
+      finally {
 
-      Files.move(file, real, StandardCopyOption.REPLACE_EXISTING);
-      Files.createSymbolicLink(file, real);
+        Files.deleteIfExists(tempFile);
 
-      log.debug(MoreFiles.asCharSource(real, StandardCharsets.UTF_8).read());
-
-      //
-      return Response
-          .created(UriBuilder
-              .fromResource(DockerRegistry.class)
-              .path(registry)
-              .path("manifests")
-              .path(version)
-              .build())
-          .header("Docker-Distribution-Api-Version", API_VERSION)
-          .header("Docker-Content-Digest", "sha256:" + hash.toString())
-          .build();
+      }
 
     }
     catch (final Throwable ex) {
@@ -212,9 +232,9 @@ public class DockerRegistry {
   public Response statManifest(@Context final UriInfo req, @PathParam("registry") final String registry, @PathParam("version") final String version)
       throws IOException {
 
-    log.info("HEAD MANIFEST: registry={} version={}", registry, version);
+    final java.nio.file.Path file = this.registry.resolve(registry, version);
 
-    final java.nio.file.Path file = this.registry.resolve("manifest." + version);
+    log.info("HEAD MANIFEST: registry={} version={} at={}", registry, version, file);
 
     if (!Files.exists(file)) {
       return Response.status(404)
@@ -224,7 +244,7 @@ public class DockerRegistry {
     }
 
     return Response
-        .ok(file.toFile())
+        .ok()
         .header("Docker-Distribution-Api-Version", API_VERSION)
         .header("Docker-Content-Digest", "sha256:" + MoreFiles.asByteSource(file).hash(Hashing.sha256()).toString())
         .build();
@@ -256,6 +276,31 @@ public class DockerRegistry {
 
   }
 
+  @GET
+  @Path("/{registry:[^_].*}/manifests/{version:.+}")
+  @Produces("text/plain")
+  public Response getPlainManifest(@PathParam("registry") final String registry, @PathParam("version") final String version) throws IOException {
+
+    final java.nio.file.Path file = this.registry.resolve(registry, version);
+
+    log.info("GET MANIFEST: registry={} version={} at={}", registry, version, file);
+
+    if (!Files.exists(file)) {
+      return Response
+          .status(404)
+          .header("Docker-Distribution-Api-Version", API_VERSION)
+          .header("Content-Length", Long.valueOf(0))
+          .build();
+    }
+
+    return Response
+        .ok("sha256:" + MoreFiles.asByteSource(file).hash(Hashing.sha256()).toString())
+        .header("Docker-Distribution-Api-Version", API_VERSION)
+        .header("Docker-Content-Digest", "sha256:" + MoreFiles.asByteSource(file).hash(Hashing.sha256()).toString())
+        .build();
+
+  }
+
   //
 
   /**
@@ -275,7 +320,7 @@ public class DockerRegistry {
 
     final Digest digest = new Digest("sha256", hash);
 
-    System.err.println("HEAD: reg=" + registry + ", hash=" + digest);
+    System.err.println("HEAD: reg=" + this.registry + ", hash=" + digest);
 
     final BlobInfo blob = this.registry.stat(digest);
 
@@ -380,7 +425,7 @@ public class DockerRegistry {
 
     final Digest digest = new Digest("sha256", hash);
 
-    log.info("GET: digest={}", registry, digest);
+    log.info("GET: registry={} digest={}", this.registry, digest);
 
     final BlobInfo blob = this.registry.stat(digest);
 

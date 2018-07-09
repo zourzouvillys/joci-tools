@@ -15,7 +15,7 @@ dependencies {
     compileOnly         'com.google.errorprone:error_prone_annotations:2.3.1'
     compileOnly         'org.eclipse.jdt:org.eclipse.jdt.annotation:2.1.100'
     compileOnly         'org.immutables:builder:2.6.1'
-    compileOnly         'org.immutables:value:2.6.1:annotations'
+    compileOnly         'org.immutables:value:2.6.1'
 
     annotationProcessor 'org.immutables:builder:2.6.1'
     annotationProcessor 'org.immutables:value:2.6.1'
@@ -26,3 +26,32 @@ dependencies {
     
 }
 
+
+eclipse {
+    classpath {
+        file.whenMerged { cp ->
+            cp.entries.add( new org.gradle.plugins.ide.eclipse.model.SourceFolder('build/generated/source/apt/main/', null) )
+        }
+    }
+}
+
+compileJava {
+    inputs.property("moduleName", "joci.core")
+    doFirst {
+        options.compilerArgs = [
+            '--module-path', classpath.asPath,            
+        ]
+        classpath = files()
+    }
+}
+
+
+eclipse.classpath.file {
+  whenMerged {
+    entries
+      .findAll { it.kind.equals('lib') || it.kind.equals('src') }
+      .each {
+        it.entryAttributes['module'] = 'true' 
+      } 
+  }
+}

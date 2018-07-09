@@ -23,7 +23,7 @@ public class FilesystemRegistry implements RegistryProvider {
 
   private static final Logger log = LoggerFactory.getLogger(FilesystemRegistry.class);
 
-  private Path base;
+  private final Path base;
 
   public FilesystemRegistry(final Path path) {
     this.base = path;
@@ -31,7 +31,7 @@ public class FilesystemRegistry implements RegistryProvider {
 
   private class Session implements RegistryUploadSession {
 
-    private String uploadId;
+    private final String uploadId;
 
     public Session(final String uploadId) {
       this.uploadId = uploadId;
@@ -73,7 +73,7 @@ public class FilesystemRegistry implements RegistryProvider {
   @Override
   public BlobInfo stat(final Digest digest) {
 
-    final Path path = resolve(digest.toString());
+    final Path path = this.resolve(digest.toString());
 
     if (!Files.exists(path)) {
       return null;
@@ -120,7 +120,7 @@ public class FilesystemRegistry implements RegistryProvider {
       Files.move(file, this.resolve(digest.toString()));
     }
 
-    return stat(digest);
+    return this.stat(digest);
 
   }
 

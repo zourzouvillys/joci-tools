@@ -4,11 +4,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import javax.ws.rs.client.Client;
-import javax.ws.rs.client.ClientBuilder;
-import javax.ws.rs.client.Invocation;
-import javax.ws.rs.client.WebTarget;
-import javax.ws.rs.core.Response;
 
 import io.zrz.joci.core.ContainerManifest;
 import io.zrz.joci.core.Digest;
@@ -17,15 +12,12 @@ import io.zrz.joci.core.LayerRegistryProvider;
 
 public class RemoteImageRegistry implements LayerRegistryProvider {
 
-  private Client client;
   private String repoUrl;
   private Path localBase;
 
   public RemoteImageRegistry(final String repoUrl, Path localBase) {
     this.repoUrl = repoUrl;
     this.localBase = localBase;
-    this.client = ClientBuilder.newBuilder()
-        .build();
   }
 
   @Override
@@ -44,19 +36,21 @@ public class RemoteImageRegistry implements LayerRegistryProvider {
     @Override
     public ContainerManifest manifest(final String version) {
 
-      final WebTarget webTarget = client.target(repoUrl);
+//      final WebTarget webTarget = client.target(repoUrl);
+//
+//      final Invocation.Builder invocationBuilder = webTarget
+//          .path(repository)
+//          .path("manifests")
+//          .path(version)
+//          .request("application/vnd.docker.distribution.manifest.v2+json");
+//
+//      try (final Response response = invocationBuilder.get(Response.class)) {
+//
+//        return ContainerManifest.fromString(response.readEntity(String.class));
+//
+//      }
 
-      final Invocation.Builder invocationBuilder = webTarget
-          .path(repository)
-          .path("manifests")
-          .path(version)
-          .request("application/vnd.docker.distribution.manifest.v2+json");
-
-      try (final Response response = invocationBuilder.get(Response.class)) {
-
-        return ContainerManifest.fromString(response.readEntity(String.class));
-
-      }
+      throw new IllegalArgumentException("");
 
     }
 
@@ -67,25 +61,27 @@ public class RemoteImageRegistry implements LayerRegistryProvider {
     @Override
     public Path resolve(final Digest digest) {
 
-      final WebTarget webTarget = client.target(repoUrl);
+      throw new IllegalArgumentException();
 
-      final Invocation.Builder invocationBuilder = webTarget
-          .path(repository)
-          .path("blobs")
-          .path(digest.toString())
-          .request();
-
-      try (final Response response = invocationBuilder.get(Response.class)) {
-
-        final byte[] bytes = response.readEntity(byte[].class);
-        Path path = localBase.resolve(digest.toString());
-        Files.write(path, bytes);
-        return path;
-
-      }
-      catch (IOException e) {
-        throw new RuntimeException(e);
-      }
+//      final WebTarget webTarget = client.target(repoUrl);
+//
+//      final Invocation.Builder invocationBuilder = webTarget
+//          .path(repository)
+//          .path("blobs")
+//          .path(digest.toString())
+//          .request();
+//
+//      try (final Response response = invocationBuilder.get(Response.class)) {
+//
+//        final byte[] bytes = response.readEntity(byte[].class);
+//        Path path = localBase.resolve(digest.toString());
+//        Files.write(path, bytes);
+//        return path;
+//
+//      }
+//      catch (IOException e) {
+//        throw new RuntimeException(e);
+//      }
 
     }
 

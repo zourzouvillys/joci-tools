@@ -14,6 +14,14 @@ public interface RegistryProvider {
 
   Path resolve(String string);
 
+  /**
+   * resolves the file for a manifests of the given tag in the specified registry.
+   *
+   * @param registry
+   * @param version
+   * @return
+   */
+
   Path resolve(String registry, String version);
 
   boolean containsBlob(Digest digest);

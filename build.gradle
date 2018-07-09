@@ -12,7 +12,7 @@ buildscript {
 apply plugin: 'eclipse'
 apply plugin: 'maven'
 
-group = 'io.zrz.jocitools'
+group = 'io.zrz.joci-tools'
 version = '1.0'
 
 eclipse.project.name = 'joci-tools'
@@ -41,10 +41,10 @@ subprojects {
     jcenter()
   }
 
-  sourceCompatibility = 1.8
-  targetCompatibility = 1.8
+  sourceCompatibility = 9
+  targetCompatibility = 9
 
-  group = 'io.zrz.jocitools'
+  group = 'io.zrz.joci-tools'
   version = '1.0'
   
   task sourcesJar(type: Jar, dependsOn: classes) {

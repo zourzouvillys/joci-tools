@@ -26,6 +26,10 @@ public final class Digest {
     this.hash = hash;
   }
 
+  public Digest(HashCode hash) {
+    this("sha256", hash.toString());
+  }
+
   public byte[] rawBytes() {
     return BaseEncoding.base16().lowerCase().decode(this.hash);
   }
