@@ -63,7 +63,7 @@ subprojects {
 
   artifacts {
     archives sourcesJar
-    archives javadocJar
+    //archives javadocJar
   }
 
   install {
