@@ -1,6 +1,7 @@
 
 eclipse.project.name = 'joci-tools:core'
 
+
 dependencies {
 
     implementation      'org.slf4j:slf4j-api:1.7.25'
@@ -33,25 +34,4 @@ eclipse {
             cp.entries.add( new org.gradle.plugins.ide.eclipse.model.SourceFolder('build/generated/source/apt/main/', null) )
         }
     }
-}
-
-compileJava {
-    inputs.property("moduleName", "joci.core")
-    doFirst {
-        options.compilerArgs = [
-            '--module-path', classpath.asPath,            
-        ]
-        classpath = files()
-    }
-}
-
-
-eclipse.classpath.file {
-  whenMerged {
-    entries
-      .findAll { it.kind.equals('lib') || it.kind.equals('src') }
-      .each {
-        it.entryAttributes['module'] = 'true' 
-      } 
-  }
 }

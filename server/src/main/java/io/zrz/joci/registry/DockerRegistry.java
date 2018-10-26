@@ -33,6 +33,7 @@ import com.google.common.io.ByteStreams;
 import com.google.common.io.MoreFiles;
 
 import io.zrz.joci.core.Digest;
+import io.zrz.joci.registry.jpx.JpxBuilder;
 import io.zrz.joci.spi.RegistryProvider;
 import io.zrz.joci.spi.RegistryProvider.BlobInfo;
 import io.zrz.joci.spi.RegistryUploadSession;
@@ -64,10 +65,7 @@ public class DockerRegistry {
   @GET
   @Produces(MediaType.APPLICATION_JSON)
   public Response apiCheck() {
-    return Response.status(200)
-        .entity("{}")
-        .header("Docker-Distribution-Api-Version", API_VERSION)
-        .build();
+    return Response.status(200).entity("{}").header("Docker-Distribution-Api-Version", API_VERSION).build();
   }
 
   /**
@@ -79,7 +77,8 @@ public class DockerRegistry {
   @POST
   @Path("/{registry:[^_].*}/blobs/uploads/")
   @Produces("*/*")
-  public Response startUpload(@PathParam("registry") final String registry, final InputStream content) throws IOException {
+  public Response startUpload(@PathParam("registry") final String registry, final InputStream content)
+      throws IOException {
 
     log.info("UPLOAD started registry={}", registry);
 
@@ -92,20 +91,14 @@ public class DockerRegistry {
 
     final RegistryUploadSession upload = this.registry.startUpload();
 
-    return Response.accepted()
-        .location(this.uploadEndpoint(upload.uploadId()))
-        .header("Docker-Upload-Uuid", upload.uploadId())
-        .header("Docker-Distribution-Api-Version", API_VERSION)
+    return Response.accepted().location(this.uploadEndpoint(upload.uploadId()))
+        .header("Docker-Upload-Uuid", upload.uploadId()).header("Docker-Distribution-Api-Version", API_VERSION)
         .build();
 
   }
 
   private URI uploadEndpoint(final String uploadId) {
-    return UriBuilder
-        .fromResource(DockerRegistry.class)
-        .path("uploads")
-        .path(uploadId)
-        .build();
+    return UriBuilder.fromResource(DockerRegistry.class).path("uploads").path(uploadId).build();
   }
 
   /**
@@ -134,8 +127,8 @@ public class DockerRegistry {
   @PUT
   @Path("/{registry:[^_].*}/manifests/{version:.+}")
   @Consumes("application/vnd.docker.distribution.manifest.v2+json")
-  public Response putManifest(@Context final UriInfo req, @PathParam("registry") final String registry, @PathParam("version") final String version,
-      final InputStream manifest) {
+  public Response putManifest(@Context final UriInfo req, @PathParam("registry") final String registry,
+      @PathParam("version") final String version, final InputStream manifest) {
 
     log.info("PUT MANIFEST: registry={} version={}", registry, version);
 
@@ -145,9 +138,7 @@ public class DockerRegistry {
 
       try {
 
-        MoreFiles
-            .asByteSink(tempFile, StandardOpenOption.TRUNCATE_EXISTING)
-            .writeFrom(manifest);
+        MoreFiles.asByteSink(tempFile, StandardOpenOption.TRUNCATE_EXISTING).writeFrom(manifest);
 
         final Digest hash = new Digest(MoreFiles.asByteSource(tempFile).hash(Hashing.sha256()));
 
@@ -163,11 +154,8 @@ public class DockerRegistry {
         // the real target already exists, so nothing to do.
         if (Files.exists(real)) {
 
-          return Response
-              .notModified()
-              .header("Docker-Distribution-Api-Version", API_VERSION)
-              .header("Docker-Content-Digest", hash.toString())
-              .build();
+          return Response.notModified().header("Docker-Distribution-Api-Version", API_VERSION)
+              .header("Docker-Content-Digest", hash.toString()).build();
 
         }
 
@@ -188,12 +176,61 @@ public class DockerRegistry {
 
         //
         return Response
-            .created(UriBuilder
-                .fromResource(DockerRegistry.class)
-                .path(registry)
-                .path("manifests")
-                .path(version)
-                .build())
+            .created(UriBuilder.fromResource(DockerRegistry.class).path(registry).path("manifests")
+                .path(version).build())
+            .header("Docker-Distribution-Api-Version", API_VERSION)
+            .header("Docker-Content-Digest", hash.toString()).build();
+
+      }
+      finally {
+
+        Files.deleteIfExists(tempFile);
+
+      }
+
+    }
+    catch (final Throwable ex) {
+      ex.printStackTrace();
+      throw new RuntimeException(ex);
+    }
+
+  }
+
+  /**
+   * accepts a JPX manifest, and creates a virtual JPX image.
+   * 
+   * @param req
+   * @param registry
+   * @param version
+   * @param manifest
+   * @return
+   */
+
+  @PUT
+  @Path("/{registry:[^_].*}/manifests/{version:.+}")
+  @Consumes("application/vnd.jpx.app.manifest.v1+json")
+  public Response putJpxManifest(@Context final UriInfo req,
+      @PathParam("registry") final String registry,
+      @PathParam("version") final String version,
+      final InputStream manifest) {
+
+    log.info("PUT JPX MANIFEST: registry={} version={}", registry, version);
+
+    try {
+
+      final java.nio.file.Path tempFile = Files.createTempFile("manifest", ".json");
+
+      try {
+
+        MoreFiles.asByteSink(tempFile, StandardOpenOption.TRUNCATE_EXISTING).writeFrom(manifest);
+
+        final Digest hash = new Digest(MoreFiles.asByteSource(tempFile).hash(Hashing.sha256()));
+
+        new JpxBuilder(this.registry).put(registry, tempFile, version);
+
+        //
+        return Response
+            .created(UriBuilder.fromResource(DockerRegistry.class).path(registry).path("manifests").path(version).build())
             .header("Docker-Distribution-Api-Version", API_VERSION)
             .header("Docker-Content-Digest", hash.toString())
             .build();
@@ -216,62 +253,53 @@ public class DockerRegistry {
   @PUT
   @Path("/{registry:[^_].*}/manifests/{version:.+}")
   @Consumes("application/vnd.docker.distribution.manifest.v1+prettyjws")
-  public Response putV1Manifest(@Context final UriInfo req, @PathParam("registry") final String registry, @PathParam("version") final String version,
-      final InputStream manifest) {
+  public Response putV1Manifest(@Context final UriInfo req, @PathParam("registry") final String registry,
+      @PathParam("version") final String version, final InputStream manifest) {
 
     log.warn("PUT [V1] MANIFEST: registry={} version={}", registry, version);
 
-    return Response.status(400)
-        .build();
+    return Response.status(400).build();
 
   }
 
   @HEAD
   @Path("/{registry:[^_].*}/manifests/{version:.+}")
   @Produces("application/vnd.docker.distribution.manifest.v2+json")
-  public Response statManifest(@Context final UriInfo req, @PathParam("registry") final String registry, @PathParam("version") final String version)
-      throws IOException {
+  public Response statManifest(@Context final UriInfo req, @PathParam("registry") final String registry,
+      @PathParam("version") final String version) throws IOException {
 
     final java.nio.file.Path file = this.registry.resolve(registry, version);
 
     log.info("HEAD MANIFEST: registry={} version={} at={}", registry, version, file);
 
     if (!Files.exists(file)) {
-      return Response.status(404)
-          .header("Docker-Distribution-Api-Version", API_VERSION)
-          .header("Content-Length", Long.valueOf(0))
-          .build();
+      return Response.status(404).header("Docker-Distribution-Api-Version", API_VERSION)
+          .header("Content-Length", Long.valueOf(0)).build();
     }
 
-    return Response
-        .ok()
-        .header("Docker-Distribution-Api-Version", API_VERSION)
-        .header("Docker-Content-Digest", "sha256:" + MoreFiles.asByteSource(file).hash(Hashing.sha256()).toString())
-        .build();
+    return Response.ok().header("Docker-Distribution-Api-Version", API_VERSION).header("Docker-Content-Digest",
+        "sha256:" + MoreFiles.asByteSource(file).hash(Hashing.sha256()).toString()).build();
 
   }
 
   @GET
   @Path("/{registry:[^_].*}/manifests/{version:.+}")
   @Produces("application/vnd.docker.distribution.manifest.v2+json")
-  public Response getManifest(@PathParam("registry") final String registry, @PathParam("version") final String version) throws IOException {
+  public Response getManifest(@PathParam("registry") final String registry,
+      @PathParam("version") final String version) throws IOException {
 
     final java.nio.file.Path file = this.registry.resolve(registry, version);
 
     log.info("GET MANIFEST: registry={} version={} at={}", registry, version, file);
 
     if (!Files.exists(file)) {
-      return Response
-          .status(404)
-          .header("Docker-Distribution-Api-Version", API_VERSION)
-          .header("Content-Length", Long.valueOf(0))
-          .build();
+      return Response.status(404).header("Docker-Distribution-Api-Version", API_VERSION)
+          .header("Content-Length", Long.valueOf(0)).build();
     }
 
-    return Response
-        .ok(file.toFile())
-        .header("Docker-Distribution-Api-Version", API_VERSION)
-        .header("Docker-Content-Digest", "sha256:" + MoreFiles.asByteSource(file).hash(Hashing.sha256()).toString())
+    return Response.ok(file.toFile()).header("Docker-Distribution-Api-Version", API_VERSION)
+        .header("Docker-Content-Digest",
+            "sha256:" + MoreFiles.asByteSource(file).hash(Hashing.sha256()).toString())
         .build();
 
   }
@@ -279,24 +307,21 @@ public class DockerRegistry {
   @GET
   @Path("/{registry:[^_].*}/manifests/{version:.+}")
   @Produces("text/plain")
-  public Response getPlainManifest(@PathParam("registry") final String registry, @PathParam("version") final String version) throws IOException {
+  public Response getPlainManifest(@PathParam("registry") final String registry,
+      @PathParam("version") final String version) throws IOException {
 
     final java.nio.file.Path file = this.registry.resolve(registry, version);
 
     log.info("GET MANIFEST: registry={} version={} at={}", registry, version, file);
 
     if (!Files.exists(file)) {
-      return Response
-          .status(404)
-          .header("Docker-Distribution-Api-Version", API_VERSION)
-          .header("Content-Length", Long.valueOf(0))
-          .build();
+      return Response.status(404).header("Docker-Distribution-Api-Version", API_VERSION)
+          .header("Content-Length", Long.valueOf(0)).build();
     }
 
-    return Response
-        .ok("sha256:" + MoreFiles.asByteSource(file).hash(Hashing.sha256()).toString())
-        .header("Docker-Distribution-Api-Version", API_VERSION)
-        .header("Docker-Content-Digest", "sha256:" + MoreFiles.asByteSource(file).hash(Hashing.sha256()).toString())
+    return Response.ok("sha256:" + MoreFiles.asByteSource(file).hash(Hashing.sha256()).toString())
+        .header("Docker-Distribution-Api-Version", API_VERSION).header("Docker-Content-Digest",
+            "sha256:" + MoreFiles.asByteSource(file).hash(Hashing.sha256()).toString())
         .build();
 
   }
@@ -325,22 +350,15 @@ public class DockerRegistry {
     final BlobInfo blob = this.registry.stat(digest);
 
     if (blob == null) {
-      return Response
-          .status(404)
-          .header("Content-Type", "application/json; charset=utf-8")
-          .header("Docker-Distribution-Api-Version", API_VERSION)
-          .header("Content-Length", Long.valueOf(0))
+      return Response.status(404).header("Content-Type", "application/json; charset=utf-8")
+          .header("Docker-Distribution-Api-Version", API_VERSION).header("Content-Length", Long.valueOf(0))
           .build();
     }
 
-    return Response
-        .ok(blob.openStream(), MediaType.APPLICATION_OCTET_STREAM_TYPE)
-        .type(MediaType.APPLICATION_OCTET_STREAM_TYPE)
-        .header("Docker-Distribution-Api-Version", API_VERSION)
-        .header("Docker-Content-Digest", digest.toString())
-        .header(HttpHeaders.ETAG, digest.toString())
-        .header("Content-Length", Long.valueOf(blob.size()))
-        .build();
+    return Response.ok(blob.openStream(), MediaType.APPLICATION_OCTET_STREAM_TYPE)
+        .type(MediaType.APPLICATION_OCTET_STREAM_TYPE).header("Docker-Distribution-Api-Version", API_VERSION)
+        .header("Docker-Content-Digest", digest.toString()).header(HttpHeaders.ETAG, digest.toString())
+        .header("Content-Length", Long.valueOf(blob.size())).build();
 
   }
 
@@ -354,31 +372,26 @@ public class DockerRegistry {
     final BlobInfo blob = this.registry.stat(digest);
 
     if (blob == null) {
-      return Response
-          .status(404)
-          .header("Docker-Distribution-Api-Version", API_VERSION)
-          .header("Content-Length", Long.valueOf(0))
+      return Response.status(404).header("Docker-Distribution-Api-Version", API_VERSION)
+          .header("X-Registry", registry).header("X-Digest", hash).header("Content-Length", Long.valueOf(0))
           .build();
     }
 
-    return Response
-        .temporaryRedirect(UriBuilder
-            .fromResource(DockerRegistry.class)
-            .path("_blobs")
-            .path(digest.toString())
-            .build())
-        .type(MediaType.APPLICATION_OCTET_STREAM_TYPE)
-        .header("Docker-Distribution-Api-Version", API_VERSION)
-        .header("Docker-Content-Digest", digest.toString())
-        .header(HttpHeaders.ETAG, digest.toString())
-        .header("Content-Length", Long.valueOf(blob.size()))
-        .build();
+    return sendBlob(blob, digest);
+
+    // return Response
+    // .temporaryRedirect(
+    // UriBuilder.fromResource(DockerRegistry.class).path("_blobs").path(digest.toString()).build())
+    // .type(MediaType.APPLICATION_OCTET_STREAM_TYPE).header("Docker-Distribution-Api-Version", API_VERSION)
+    // .header("Docker-Content-Digest", digest.toString()).header(HttpHeaders.ETAG, digest.toString())
+    // .header("Content-Length", Long.valueOf(blob.size())).build();
 
   }
 
   @HEAD
   @Path("/{registry:[^_].*}/blobs/sha256:{hash:[a-f0-9]+}")
-  public Response statBlobRedirect(@PathParam("registry") final String registry, @PathParam("hash") final String hash) throws IOException {
+  public Response statBlobRedirect(@PathParam("registry") final String registry, @PathParam("hash") final String hash)
+      throws IOException {
 
     final Digest digest = new Digest("sha256", hash);
 
@@ -386,25 +399,17 @@ public class DockerRegistry {
 
     if (blob == null) {
       log.info("couldn't find {} {}", registry, digest);
-      return Response
-          .status(404)
-          .header("Docker-Distribution-Api-Version", API_VERSION)
-          .header("Content-Length", Long.valueOf(0))
-          .build();
+      return Response.status(404).header("Docker-Distribution-Api-Version", API_VERSION)
+          .header("Content-Length", Long.valueOf(0)).build();
     }
 
     return Response
-        .temporaryRedirect(UriBuilder
-            .fromResource(DockerRegistry.class)
-            .path("_blobs")
-            .path(digest.toString())
-            .build())
-        .type(MediaType.APPLICATION_OCTET_STREAM_TYPE)
-        .header("Docker-Distribution-Api-Version", API_VERSION)
+        .temporaryRedirect(
+            UriBuilder.fromResource(DockerRegistry.class).path("_blobs").path(digest.toString()).build())
+        .type(MediaType.APPLICATION_OCTET_STREAM_TYPE).header("Docker-Distribution-Api-Version", API_VERSION)
         .header("Docker-Content-Digest", digest.toString())
         .header(HttpHeaders.ETAG, new EntityTag(digest.toString()).getValue())
-        .header("Content-Length", Long.valueOf(blob.size()))
-        .build();
+        .header("Content-Length", Long.valueOf(blob.size())).build();
 
   }
 
@@ -430,20 +435,24 @@ public class DockerRegistry {
     final BlobInfo blob = this.registry.stat(digest);
 
     if (blob == null) {
-      return Response
-          .status(404)
-          .header("Docker-Distribution-Api-Version", API_VERSION)
-          .header("Content-Length", Long.valueOf(0))
-          .build();
+      return Response.status(404).header("Docker-Distribution-Api-Version", API_VERSION)
+          .header("Content-Length", Long.valueOf(0)).build();
     }
 
-    return Response
-        .ok(blob.openStream(), MediaType.APPLICATION_OCTET_STREAM_TYPE)
+    return Response.ok(blob.openStream(), MediaType.APPLICATION_OCTET_STREAM_TYPE)
         .header("Docker-Distribution-Api-Version", API_VERSION)
-        .header("Docker-Content-Digest", digest.toString())
-        .header(HttpHeaders.ETAG, digest.toString())
-        .header("Content-Length", Long.valueOf(blob.size()))
-        .build();
+        .header("Docker-Content-Digest", digest.toString()).header(HttpHeaders.ETAG, digest.toString())
+        .header("Content-Length", Long.valueOf(blob.size())).build();
+
+  }
+
+  Response sendBlob(BlobInfo blob, Digest digest) throws IOException {
+
+    return Response.ok(blob.openStream(), MediaType.APPLICATION_OCTET_STREAM_TYPE)
+        .header("Docker-Distribution-Api-Version", API_VERSION)
+        .header(HttpHeaders.ETAG, new EntityTag(digest.toString()).getValue())
+        .header("Docker-Content-Digest", digest.toString()).header(HttpHeaders.ETAG, digest.toString())
+        .header("Content-Length", Long.valueOf(blob.size())).build();
 
   }
 

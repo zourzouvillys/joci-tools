@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -14,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.Range;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.Hashing;
+import com.google.common.io.ByteSink;
 import com.google.common.io.MoreFiles;
 
 import io.zrz.joci.spi.RegistryProvider;
@@ -76,6 +78,7 @@ public class FilesystemRegistry implements RegistryProvider {
     final Path path = this.resolve(digest.toString());
 
     if (!Files.exists(path)) {
+      log.warn("missing blob: {} at {}", digest, path);
       return null;
     }
 
@@ -89,6 +92,11 @@ public class FilesystemRegistry implements RegistryProvider {
       @Override
       public InputStream openStream() throws FileNotFoundException {
         return new FileInputStream(path.toFile());
+      }
+
+      @Override
+      public Digest digest() {
+        return digest;
       }
 
     };
@@ -121,6 +129,29 @@ public class FilesystemRegistry implements RegistryProvider {
     }
 
     return this.stat(digest);
+
+  }
+
+  @Override
+  public BlobInfo putBlob(byte[] data) {
+
+    final HashCode hash = Hashing.sha256().hashBytes(data);
+
+    Path target = resolve(new Digest(hash).toString());
+
+    if (Files.exists(target)) {
+      return this.stat(new Digest(hash));
+    }
+
+    try {
+      MoreFiles.asByteSink(target, StandardOpenOption.CREATE_NEW)
+          .write(data);
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+
+    return this.stat(new Digest(hash));
 
   }
 

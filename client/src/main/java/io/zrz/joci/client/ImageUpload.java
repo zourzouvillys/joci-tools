@@ -2,6 +2,7 @@ package io.zrz.joci.client;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Objects;
 import java.util.stream.Stream;
 
 import com.google.common.io.ByteSource;
@@ -23,7 +24,7 @@ public class ImageUpload {
   public static final MediaType BINARY = MediaType.parse("application/octet-stream");
 
   public ImageUpload(String registry) {
-    this.registry = registry;
+    this.registry = Objects.requireNonNull(registry);
     this.client = new OkHttpClient();
   }
 
@@ -43,12 +44,16 @@ public class ImageUpload {
   public boolean exists(Digest digest) {
     try {
 
-      String path = registry + "/_blobs/" + digest.algorithm() + ":" + digest.hash();
-
       Request request = new Request.Builder()
-          .url(path)
+          .url(HttpUrl.parse(this.registry)
+              .newBuilder()
+              .addPathSegment("_blobs")
+              .addPathSegment(digest.algorithm() + ":" + digest.hash())
+              .build())
           .head()
           .build();
+      
+      System.err.println(request.url());
 
       Response response = client.newCall(request).execute();
 
@@ -185,6 +190,42 @@ public class ImageUpload {
         .map(MoreFiles::asByteSource)
         .map(src -> createContext(src))
         .forEach(ctx -> ctx.send());
+  }
+
+  public String uploadManifest(String registry, String tag, String mediaType, String manifest) {
+
+    try {
+
+      HttpUrl url = HttpUrl.parse(this.registry)
+          .newBuilder()
+          .addPathSegments(registry)
+          .addPathSegment("manifests")
+          .addPathSegment(tag)
+          .build();
+
+      System.err.println(url);
+
+      // .addQueryParameter("digest", digest.toString()).build();
+
+      System.err.println("uploading " + url);
+
+      Request request = new Request.Builder()
+          .url(url)
+          .put(RequestBody.create(MediaType.parse(mediaType), manifest))
+          .build();
+
+      Response response = client.newCall(request).execute();
+
+      if (!"registry/2.0".equals(response.header("Docker-Distribution-Api-Version", null))) {
+        throw new IllegalArgumentException("invalid server API version: " + response.header("Docker-Distribution-Api-Version"));
+      }
+
+      return response.body().string();
+
+    }
+    catch (IOException ex) {
+      throw new RuntimeException(ex);
+    }
   }
 
 }

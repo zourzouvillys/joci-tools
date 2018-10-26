@@ -12,7 +12,7 @@ dependencies {
   implementation 'com.fasterxml.jackson.core:jackson-databind:2.9.6'
 
   // for uploads
-  implementation 'com.squareup.okhttp3:okhttp:3.10.0'
+  implementation 'com.squareup.okhttp3:okhttp:3.11.0'
 
   implementation project(':core')
 
@@ -29,24 +29,3 @@ dependencies {
   
 }
 
-
-compileJava {
-    inputs.property("moduleName", "joci.client")
-    doFirst {
-        options.compilerArgs = [
-            '--module-path', classpath.asPath,            
-        ]
-        classpath = files()
-    }
-}
-
-
-eclipse.classpath.file {
-  whenMerged {
-    entries
-      .findAll { it.kind.equals('lib') || it.kind.equals('src') }
-      .each {
-        it.entryAttributes['module'] = 'true' 
-      } 
-  }
-}

@@ -19,7 +19,7 @@ import io.zrz.joci.core.Digest;
 import io.zrz.joci.core.ImageBundle;
 
 /**
- * converts a container manigest into an volume, using snapshots to represent layers.
+ * converts a container manifest into an volume, using snapshots to represent layers.
  *
  * for each layer, we check to see if a snapshot already exists for it. if it does, we use that for the volume otherwise
  * we create a snapshot and tag it with the checksum.

@@ -1,9 +1,23 @@
+buildscript {
+  repositories {
+    maven {
+      url 'https://plugins.gradle.org/m2/'
+    }
+  }
+  dependencies {
+    classpath 'com.bmuschko:gradle-docker-plugin:3.4.3'
+  }
+}
 
 apply plugin: 'application'
+apply plugin: 'com.bmuschko.docker-java-application'
 
 mainClassName = 'io.zrz.joci.registry.Main'
 
 eclipse.project.name = 'joci-tools:server'
+
+sourceCompatibility = 8
+targetCompatibility = 8
 
 dependencies {
 
@@ -19,6 +33,7 @@ dependencies {
   implementation 'com.github.rvesse:airline:2.4.0'
 
   implementation project(':core')
+  implementation project(':jpx')
 
   compileOnly         'com.google.errorprone:error_prone_annotations:2.3.1'
   compileOnly         'org.eclipse.jdt:org.eclipse.jdt.annotation:2.1.100'
@@ -38,4 +53,35 @@ dependencies {
   implementation 'org.glassfish.jaxb:jaxb-runtime:2.3.0'
   implementation 'javax.activation:activation:1.1.1'
   
+}
+
+
+docker {
+    javaApplication {
+        baseImage = 'openjdk:10-jre-slim'
+        ports = [ 8080 ]
+        tag = '937149692049.dkr.ecr.us-west-2.amazonaws.com/adrp/repository'
+    }
+}
+
+
+compileJava {
+    inputs.property("moduleName", "joci.server")
+    doFirst {
+//        options.compilerArgs = [
+//            '--module-path', classpath.asPath,            
+//        ]
+//        classpath = files()
+    }
+}
+
+
+eclipse.classpath.file {
+  whenMerged {
+    entries
+      .findAll { it.kind.equals('lib') || it.kind.equals('src') }
+      .each {
+        it.entryAttributes['module'] = 'true' 
+      } 
+  }
 }
