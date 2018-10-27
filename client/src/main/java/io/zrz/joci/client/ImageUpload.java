@@ -5,6 +5,8 @@ import java.nio.file.Path;
 import java.util.Objects;
 import java.util.stream.Stream;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.io.ByteSource;
 import com.google.common.io.MoreFiles;
 
@@ -17,6 +19,8 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 
 public class ImageUpload {
+
+  private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ImageUpload.class);
 
   private String registry;
   private OkHttpClient client;
@@ -52,8 +56,6 @@ public class ImageUpload {
               .build())
           .head()
           .build();
-      
-      System.err.println(request.url());
 
       Response response = client.newCall(request).execute();
 
@@ -155,7 +157,7 @@ public class ImageUpload {
 
         HttpUrl url = HttpUrl.parse(uploadUrl).newBuilder().addQueryParameter("digest", digest.toString()).build();
 
-        System.err.println("uploading " + url + " " + src.size() + " ---> " + digest.toString());
+        log.debug("uploading {} ({} bytes) to {}", url, src.size(), digest.toString());
 
         Request request = new Request.Builder()
             .url(url)
@@ -192,7 +194,7 @@ public class ImageUpload {
         .forEach(ctx -> ctx.send());
   }
 
-  public String uploadManifest(String registry, String tag, String mediaType, String manifest) {
+  public UploadResponse uploadManifest(String registry, String tag, String mediaType, String manifest) {
 
     try {
 
@@ -203,11 +205,7 @@ public class ImageUpload {
           .addPathSegment(tag)
           .build();
 
-      System.err.println(url);
-
-      // .addQueryParameter("digest", digest.toString()).build();
-
-      System.err.println("uploading " + url);
+      log.debug("uploading {}", url);
 
       Request request = new Request.Builder()
           .url(url)
@@ -220,7 +218,12 @@ public class ImageUpload {
         throw new IllegalArgumentException("invalid server API version: " + response.header("Docker-Distribution-Api-Version"));
       }
 
-      return response.body().string();
+      if (response.code() == 424) {
+        // missing dependencies
+        return new MissingBlobResponse(response);
+      }
+
+      return new SuccessResponse(response);
 
     }
     catch (IOException ex) {

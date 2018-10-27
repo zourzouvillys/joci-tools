@@ -35,9 +35,9 @@ public interface RegistryProvider {
 
   public interface BlobInfo {
 
-    long size() throws IOException;
+    long size();
 
-    InputStream openStream() throws IOException;
+    InputStream openStream();
 
     Digest digest();
 

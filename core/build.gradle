@@ -1,3 +1,6 @@
+plugins {
+  id 'maven-publish'
+}
 
 eclipse.project.name = 'joci-tools:core'
 
@@ -34,4 +37,24 @@ eclipse {
             cp.entries.add( new org.gradle.plugins.ide.eclipse.model.SourceFolder('build/generated/source/apt/main/', null) )
         }
     }
+}
+
+
+
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = 'io.zrz.joci'
+            artifactId = 'core'
+            version = '1.0'
+            from components.java
+        }
+    }
+  repositories {
+    maven {
+            url = "$buildDir/../../build/repo"
+        }
+    }      
+    
 }

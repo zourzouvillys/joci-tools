@@ -38,6 +38,17 @@ public final class Digest {
     return HashCode.fromBytes(rawBytes());
   }
 
+  public boolean equals(Object other) {
+    if (other instanceof Digest) {
+      return other.toString().contentEquals(this.toString());
+    }
+    return false;
+  }
+  
+  public int hashCode () {
+    return this.toString().hashCode();
+  }
+  
   final String algorithm;
   final String hash;
 

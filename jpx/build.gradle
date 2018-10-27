@@ -1,15 +1,20 @@
+plugins {
+    id 'maven-publish'
+}
+
+
 eclipse.project.name = 'joci-tools:jpx'
 
 dependencies {
 
-  implementation project(':client')
+  api project(':client')
 
   implementation 'org.slf4j:slf4j-api:1.7.25'
   implementation 'com.google.guava:guava:27.0-jre'
   implementation 'org.apache.commons:commons-compress:1.18'
   implementation 'commons-io:commons-io:2.6'
   
-  implementation 'com.fasterxml.jackson.core:jackson-databind:2.9.7'
+  api 'com.fasterxml.jackson.core:jackson-databind:2.9.7'
   implementation 'ch.qos.logback:logback-classic:1.2.3'
   implementation 'com.github.rvesse:airline:2.4.0'
   implementation 'com.squareup.okhttp3:okhttp:3.11.0'
@@ -27,4 +32,21 @@ dependencies {
   // Use JUnit test framework
   testImplementation 'junit:junit:4.12'
   
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = 'io.zrz.joci'
+            artifactId = 'jpx'
+            version = '1.0'
+            from components.java
+        }
+    }
+  repositories {
+    maven {
+            url = "$buildDir/../../build/repo"
+        }
+    }      
+    
 }

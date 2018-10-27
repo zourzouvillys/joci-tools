@@ -1,3 +1,6 @@
+plugins {
+  id 'maven-publish'
+}
 
 eclipse.project.name = 'joci-tools:client'
 
@@ -14,7 +17,7 @@ dependencies {
   // for uploads
   implementation 'com.squareup.okhttp3:okhttp:3.11.0'
 
-  implementation project(':core')
+  api project(':core')
 
   //compileOnly         'com.google.errorprone:error_prone_annotations:2.3.1'
   compileOnly         'org.eclipse.jdt:org.eclipse.jdt.annotation:2.1.100'
@@ -29,3 +32,21 @@ dependencies {
   
 }
 
+
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = 'io.zrz.joci'
+            artifactId = 'client'
+            version = '1.0'
+            from components.java
+        }
+    }
+  repositories {
+    maven {
+            url = "$buildDir/../../build/repo"
+        }
+    }      
+    
+}

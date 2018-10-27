@@ -12,7 +12,7 @@ buildscript {
 apply plugin: 'eclipse'
 apply plugin: 'maven'
 
-group = 'io.zrz.joci-tools'
+group = 'io.zrz.joci'
 version = '1.0'
 
 eclipse.project.name = 'joci-tools'
@@ -80,4 +80,9 @@ subprojects {
     }
   }
 
+
+
 }
+
+
+

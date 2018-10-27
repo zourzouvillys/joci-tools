@@ -85,18 +85,32 @@ public class FilesystemRegistry implements RegistryProvider {
     return new BlobInfo() {
 
       @Override
-      public long size() throws IOException {
-        return Files.size(path);
+      public long size() {
+        try {
+          return Files.size(path);
+        }
+        catch (IOException e) {
+          throw new RuntimeException(e);
+        }
       }
 
       @Override
-      public InputStream openStream() throws FileNotFoundException {
-        return new FileInputStream(path.toFile());
+      public InputStream openStream() {
+        try {
+          return new FileInputStream(path.toFile());
+        }
+        catch (FileNotFoundException e) {
+          throw new RuntimeException(e);
+        }
       }
 
       @Override
       public Digest digest() {
         return digest;
+      }
+
+      public String toString() {
+        return "FSBlob(" + digest + ", " + path + ", " + size() + ")";
       }
 
     };

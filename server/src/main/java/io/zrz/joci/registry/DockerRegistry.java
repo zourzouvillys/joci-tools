@@ -25,9 +25,13 @@ import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriBuilderException;
 import javax.ws.rs.core.UriInfo;
 
+import org.glassfish.grizzly.http.util.HttpStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.hash.Hashing;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.MoreFiles;
@@ -132,6 +136,11 @@ public class DockerRegistry {
 
     log.info("PUT MANIFEST: registry={} version={}", registry, version);
 
+    if (version.startsWith("sha256:")) {
+      return Response.status(400)
+          .build();
+    }
+
     try {
 
       final java.nio.file.Path tempFile = Files.createTempFile("manifest", ".json");
@@ -146,10 +155,17 @@ public class DockerRegistry {
 
         final java.nio.file.Path file = this.registry.resolve(registry, version);
 
+        if (Files.exists(file) && !Files.isSymbolicLink(file)) {
+          log.warn("ignoring attempt to overwrite content digest");
+          return Response.status(403)
+              .header("Docker-Content-Digest", hash.toString())
+              .build();
+        }
+
         Files.createDirectories(file.getParent());
 
         // the target file based on the hash.
-        final java.nio.file.Path real = file.getParent().resolve(hash.getHash());
+        final java.nio.file.Path real = file.getParent().resolve(hash.toString());
 
         // the real target already exists, so nothing to do.
         if (Files.exists(real)) {
@@ -176,7 +192,10 @@ public class DockerRegistry {
 
         //
         return Response
-            .created(UriBuilder.fromResource(DockerRegistry.class).path(registry).path("manifests")
+            .created(UriBuilder
+                .fromResource(DockerRegistry.class)
+                .path(registry)
+                .path("manifests")
                 .path(version).build())
             .header("Docker-Distribution-Api-Version", API_VERSION)
             .header("Docker-Content-Digest", hash.toString()).build();
@@ -209,12 +228,18 @@ public class DockerRegistry {
   @PUT
   @Path("/{registry:[^_].*}/manifests/{version:.+}")
   @Consumes("application/vnd.jpx.app.manifest.v1+json")
+  @Produces("application/json;charset=UTF-8")
   public Response putJpxManifest(@Context final UriInfo req,
       @PathParam("registry") final String registry,
       @PathParam("version") final String version,
       final InputStream manifest) {
 
     log.info("PUT JPX MANIFEST: registry={} version={}", registry, version);
+
+    if (version.startsWith("sha256:")) {
+      return Response.status(400)
+          .build();
+    }
 
     try {
 
@@ -224,15 +249,80 @@ public class DockerRegistry {
 
         MoreFiles.asByteSink(tempFile, StandardOpenOption.TRUNCATE_EXISTING).writeFrom(manifest);
 
-        final Digest hash = new Digest(MoreFiles.asByteSource(tempFile).hash(Hashing.sha256()));
+        JpxBuilder b = new JpxBuilder(this.registry, tempFile);
 
-        new JpxBuilder(this.registry).put(registry, tempFile, version);
+        if (!b.missingBlobs().isEmpty()) {
+
+          ObjectNode res = JsonNodeFactory.instance.objectNode();
+
+          res.put("status", "missingBlobs");
+          ArrayNode missing = res.putArray("missing");
+
+          b.missingBlobs()
+              .forEach(e -> {
+                missing.add(e);
+              });
+
+          return Response.status(424)
+              .header("Docker-Distribution-Api-Version", API_VERSION)
+              .entity(res.toString())
+              .build();
+
+        }
+
+        Digest hash = b.put(registry, version);
+
+        ObjectNode res = JsonNodeFactory.instance.objectNode();
+
+        if (b.previousTagTarget().isPresent()) {
+
+          Digest prev = b.previousTagTarget().get();
+
+          if (!prev.hash().equals(hash.hash())) {
+
+            res.put("status", "replaced");
+            res.put("previous", prev.toString());
+
+          }
+          else {
+
+            res.put("status", "unchanged");
+
+          }
+
+        }
+        else {
+
+          res.put("status", "created");
+
+        }
+
+        res.put("target", hash.toString());
+
+        res.put("virtualSize", b.virtualSize());
+
+        res.putObject("stableLayer")
+            .put("size", b.stableLayer().size())
+            .put("digest", new Digest(b.stableLayer().compressedHash()).toString())
+            .put("contentDigest", new Digest(b.stableLayer().uncompressedHash()).toString());
+
+        res.putObject("changingLayer")
+            .put("size", b.changingLayer().size())
+            .put("digest", new Digest(b.changingLayer().compressedHash()).toString())
+            .put("contentDigest", new Digest(b.changingLayer().uncompressedHash()).toString());
 
         //
         return Response
-            .created(UriBuilder.fromResource(DockerRegistry.class).path(registry).path("manifests").path(version).build())
+            .created(
+                UriBuilder
+                    .fromResource(DockerRegistry.class)
+                    .path(registry)
+                    .path("manifests")
+                    .path(version)
+                    .build())
             .header("Docker-Distribution-Api-Version", API_VERSION)
             .header("Docker-Content-Digest", hash.toString())
+            .entity(res.toString())
             .build();
 
       }

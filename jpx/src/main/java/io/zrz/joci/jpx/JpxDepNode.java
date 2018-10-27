@@ -20,8 +20,24 @@ public class JpxDepNode {
    * 
    */
 
-  public JpxDepNode(ObjectNode node) {
-    this.node = node;
+  public JpxDepNode(ObjectNode in) {
+    this.node = in.deepCopy();
+    if (node.has("file") && !node.has("integrity")) {
+      try {
+
+        HashCode hash = Files.asByteSource(new File(node.get("file").asText())).hash(Hashing.sha256());
+        node.put("integrity", "sha256:" + hash.toString());
+        node.put("name", hash.toString().substring(0, 8) + "/" + node.get("name").asText());
+
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+
+      if (node.get("file").asText().endsWith("-SNAPSHOT.jar")) {
+        node.put("changing", true);
+      }
+    }
   }
 
   /**
@@ -48,15 +64,6 @@ public class JpxDepNode {
    */
 
   public static JpxDepNode fromJson(ObjectNode node) {
-    if (node.has("file") && !node.has("integrity")) {
-      try {
-        HashCode hash = Files.asByteSource(new File(node.get("file").asText())).hash(Hashing.sha256());
-        node.put("integrity", "sha256:" + hash.toString());
-      }
-      catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-    }
     return new JpxDepNode(node);
   }
 
@@ -65,11 +72,17 @@ public class JpxDepNode {
   }
 
   public JsonNode toManifestEntry() {
-
     ObjectNode cp = node.deepCopy();
     cp.remove("file");
     return cp;
+  }
+  
+  public JsonNode node() {
+    return this.node;
+  }
 
+  public String name() {
+    return this.node.get("name").asText();
   }
 
 }

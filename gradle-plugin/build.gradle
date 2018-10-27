@@ -1,0 +1,35 @@
+plugins {
+    id 'groovy'
+    id 'maven-publish'
+}
+
+
+eclipse.project.name = 'joci-tools:gradle-plugin'
+
+dependencies {
+  compile project(':jpx')
+  compile project(':client')
+  compile gradleApi()
+  compile localGroovy()
+  compile 'com.fasterxml.jackson.core:jackson-databind:2.9.7'
+  compile 'com.google.guava:guava:27.0-jre'
+}
+
+
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = 'io.zrz.joci'
+            artifactId = 'gradle-plugin'
+            version = '1.0'
+            from components.java
+        }
+    }
+  repositories {
+    maven {
+            url = "$buildDir/../../build/repo"
+        }
+    }      
+    
+}

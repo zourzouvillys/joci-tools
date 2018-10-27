@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-pd
+spec:
+  containers:
+  - image: ubuntu:latest
+    name: test-container
+    args:
+    - sleep
+    - "1000000"
+    volumeMounts:
+    - mountPath: /var/run/docker.sock
+      name: docker-sock-volume
+  volumes:
+  - name: docker-sock-volume
+    hostPath:
+      # location on host
+      path: /var/run/docker.sock
+      # this field is optional
+      type: File
+      
