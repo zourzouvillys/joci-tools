@@ -8,6 +8,8 @@ eclipse.project.name = 'joci-tools:client'
 
 dependencies {
 
+  compile 'com.google.guava:guava:27.0-jre'
+
   // implementation 'org.glassfish.jersey.ext.rx:jersey-rx-client-rxjava2:2.27'
   // implementation 'org.glassfish.jersey.core:jersey-client:2.27'
   implementation 'org.slf4j:slf4j-api:1.7.25'
@@ -15,7 +17,7 @@ dependencies {
   implementation 'com.fasterxml.jackson.core:jackson-databind:2.9.6'
 
   // for uploads
-  implementation 'com.squareup.okhttp3:okhttp:3.11.0'
+  implementation 'com.squareup.okhttp3:okhttp:3.12.1'
 
   api project(':core')
 

@@ -4,6 +4,9 @@ plugins {
 
 eclipse.project.name = 'joci-tools:core'
 
+sourceCompatibility = 11
+targetCompatibility = 11
+
 
 dependencies {
 
@@ -38,9 +41,6 @@ eclipse {
         }
     }
 }
-
-
-
 
 publishing {
     publications {

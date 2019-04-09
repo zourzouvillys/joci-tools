@@ -21,10 +21,6 @@ repositories {
     jcenter()
 }
 
-task wrapper(type: Wrapper) {
-    gradleVersion = '4.8'
-}
-
 // --------------------------------------------------
 // install
 // --------------------------------------------------
@@ -41,8 +37,8 @@ subprojects {
     jcenter()
   }
 
-  sourceCompatibility = 9
-  targetCompatibility = 9
+  sourceCompatibility = 11
+  targetCompatibility = 11
 
   group = 'io.zrz.joci-tools'
   version = '1.0'

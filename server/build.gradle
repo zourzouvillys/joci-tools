@@ -16,9 +16,6 @@ mainClassName = 'io.zrz.joci.registry.Main'
 
 eclipse.project.name = 'joci-tools:server'
 
-sourceCompatibility = 8
-targetCompatibility = 8
-
 dependencies {
 
   implementation      'org.glassfish.jersey.containers:jersey-container-grizzly2-http:2.26'
@@ -58,7 +55,7 @@ dependencies {
 
 docker {
     javaApplication {
-        baseImage = 'openjdk:10-jre-slim'
+        baseImage = 'openjdk:11-jre-slim'
         ports = [ 8080 ]
         tag = '937149692049.dkr.ecr.us-west-2.amazonaws.com/adrp/repository'
     }

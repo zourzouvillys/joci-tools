@@ -3,14 +3,14 @@ package io.zrz.joci.client;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.io.ByteSource;
 import com.google.common.io.MoreFiles;
 
 import io.zrz.joci.core.Digest;
+import okhttp3.ConnectionPool;
 import okhttp3.HttpUrl;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
@@ -29,7 +29,10 @@ public class ImageUpload {
 
   public ImageUpload(String registry) {
     this.registry = Objects.requireNonNull(registry);
-    this.client = new OkHttpClient();
+    this.client =
+      new OkHttpClient.Builder()
+        .connectionPool(new ConnectionPool(0, 1, TimeUnit.MICROSECONDS))
+        .build();
   }
 
   public Upload createContext(Path src) {
@@ -48,12 +51,14 @@ public class ImageUpload {
   public boolean exists(Digest digest) {
     try {
 
-      Request request = new Request.Builder()
+      Request request =
+        new Request.Builder()
           .url(HttpUrl.parse(this.registry)
-              .newBuilder()
-              .addPathSegment("_blobs")
-              .addPathSegment(digest.algorithm() + ":" + digest.hash())
-              .build())
+            .newBuilder()
+            .addPathSegment("_blobs")
+            .addPathSegment(digest.algorithm() + ":" + digest.hash())
+            .build())
+          .addHeader("Connection", "close")
           .head()
           .build();
 
@@ -96,14 +101,18 @@ public class ImageUpload {
 
       try {
 
-        Request request = new Request.Builder()
+        Request request =
+          new Request.Builder()
             .url(registry + "/jars/blobs/uploads/")
             .post(RequestBody.create(JSON, ""))
+            .addHeader("Connection", "close")
             .build();
+
+        log.info("POST to {}", request.url());
 
         Response response = client.newCall(request).execute();
 
-        if (response.code() / 100 != 2) {
+        if ((response.code() / 100) != 2) {
           throw new IllegalArgumentException("invalid server response");
         }
 
@@ -159,9 +168,11 @@ public class ImageUpload {
 
         log.debug("uploading {} ({} bytes) to {}", url, src.size(), digest.toString());
 
-        Request request = new Request.Builder()
+        Request request =
+          new Request.Builder()
             .url(url)
             .put(RequestBody.create(BINARY, src.read()))
+            .addHeader("Connection", "close")
             .build();
 
         Response response = client.newCall(request).execute();
@@ -189,16 +200,17 @@ public class ImageUpload {
 
   public void uploadFiles(Stream<Path> paths) {
     paths
-        .map(MoreFiles::asByteSource)
-        .map(src -> createContext(src))
-        .forEach(ctx -> ctx.send());
+      .map(MoreFiles::asByteSource)
+      .map(src -> createContext(src))
+      .forEach(ctx -> ctx.send());
   }
 
   public UploadResponse uploadManifest(String registry, String tag, String mediaType, String manifest) {
 
     try {
 
-      HttpUrl url = HttpUrl.parse(this.registry)
+      HttpUrl url =
+        HttpUrl.parse(this.registry)
           .newBuilder()
           .addPathSegments(registry)
           .addPathSegment("manifests")
@@ -207,9 +219,11 @@ public class ImageUpload {
 
       log.debug("uploading {}", url);
 
-      Request request = new Request.Builder()
+      Request request =
+        new Request.Builder()
           .url(url)
           .put(RequestBody.create(MediaType.parse(mediaType), manifest))
+          .addHeader("Connection", "close")
           .build();
 
       Response response = client.newCall(request).execute();
